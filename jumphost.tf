@@ -25,11 +25,15 @@ module "jumphost" {
 
   ami                         = data.aws_ami.latest-ubuntu.id
   associate_public_ip_address = true
-  instance_type               = "t2.xlarge"
+  instance_type               = var.ec2_ubuntu_type
   key_name                    = var.ec2_key_name
   monitoring                  = false
   vpc_security_group_ids      = [module.jumphost_sg.this_security_group_id]
   subnet_ids                  = module.vpc.public_subnets
+
+
+  # build user_data file from template
+  user_data = templatefile("${path.module}/jumphost.userdata.tmpl",{})
 
   # this box needs to know the ip address of the bigip and the juicebox host
   # it also needs to know the bigip username and password to use
@@ -61,7 +65,7 @@ module "jumphost_sg" {
       description = "Juiceshop ports"
       cidr_blocks = var.allowed_mgmt_cidr
     },
-     {
+    {
       from_port   = 3000
       to_port     = 3000
       protocol    = "tcp"
@@ -109,7 +113,7 @@ resource "null_resource" "transfer" {
       user        = "ubuntu"
       private_key = file(var.ec2_key_file)
       host        = module.jumphost.public_ip[count.index]
-    }  
+    }
   }
 }
 
@@ -118,7 +122,7 @@ resource "null_resource" "transfer" {
 resource "aws_eip" "juiceshop" {
   count                     = length(var.azs)
   vpc                       = true
-  network_interface         = "${data.aws_network_interface.bar[count.index].id}"
+  network_interface         = data.aws_network_interface.bar[count.index].id
   associate_with_private_ip = element(flatten(data.aws_network_interface.bar[count.index].private_ips),1)
   tags = {
     Name = format("%s-juiceshop-eip-%s%s", var.prefix, random_id.id.hex,count.index)
@@ -128,7 +132,7 @@ resource "aws_eip" "juiceshop" {
 resource "aws_eip" "grafana" {
   count                     = length(var.azs)
   vpc                       = true
-  network_interface         = "${data.aws_network_interface.bar[count.index].id}"
+  network_interface         = data.aws_network_interface.bar[count.index].id
   associate_with_private_ip = element(flatten(data.aws_network_interface.bar[count.index].private_ips),2)
   tags = {
     Name = format("%s-grafana-eip-%s%s", var.prefix, random_id.id.hex,count.index)

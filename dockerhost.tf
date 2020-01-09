@@ -23,7 +23,7 @@ module "dockerhost" {
 
   ami                         = data.aws_ami.latest-ubuntu-docker.id
   associate_public_ip_address = false
-  instance_type               = "t2.xlarge"
+  instance_type               = var.ec2_ubuntu_type
   root_block_device = [
       {
         volume_type = "gp2"
@@ -36,7 +36,7 @@ module "dockerhost" {
   subnet_ids                  = module.vpc.private_subnets
 
 
-  user_data = templatefile("${path.module}/userdata.tmpl", {})
+  user_data = templatefile("${path.module}/dockerhost.userdata.tmpl", {})
 
   tags = {
     Terraform   = "true"
